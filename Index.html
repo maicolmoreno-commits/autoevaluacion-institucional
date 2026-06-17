@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-MAAC Institucional 2025</title>
+    
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React y ReactDOM (CDNs en formato UMD) -->
+    <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Lucide Icons para React (CDN en formato UMD) -->
+    <script src="https://unpkg.com/lucide-react@0.292.0/dist/umd/lucide-react.js"></script>
+    
+    <!-- Babel Standalone para transpilar JSX y ES Modules en el navegador -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        /* Estilos personalizados para la barra de desplazamiento */
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+        body { -webkit-font-smoothing: antialiased; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    
+    <!-- Contenedor donde se montará la aplicación React -->
+    <div id="root"></div>
+
+    <!-- Script Principal con soporte de Babel y Módulos -->
+    <script type="text/babel" data-type="module">
+        /* @jsx React.createElement */
+        /* @jsxFrag React.Fragment */
+
+        // ============================================================================
+        // 1. EXTRACCIÓN DE GLOBALES (React Hooks e Iconos Lucide)
+        // ============================================================================
+        const { useState, useEffect, useMemo, useRef } = React;
+        const { createRoot } = ReactDOM;
+        
+        const { 
+          BookOpen, Users, UserCheck, GraduationCap, FileText, 
+          TrendingUp, Globe, Lightbulb, Heart, Monitor, 
+          Settings, ShieldCheck, ChevronRight, ChevronLeft, 
+          Save, BarChart2, CheckCircle, Info, Sparkles, Loader2, X, ScrollText, Target, Zap, Upload,
+          Volume2, VolumeX, MessageSquare, Send, Award, UserCog, CheckSquare, Server, ClipboardList, PlusCircle
+        } = LucideReact;
+
+        // ============================================================================
+        // 2. IMPORTACIONES DE FIREBASE (ES Modules nativos para el navegador)
+        // ============================================================================
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, collection, doc, setDoc, onSnapshot, query, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+        // ============================================================================
+        // 3. CONFIGURACIÓN DE FIREBASE
+        // ============================================================================
+        const fallbackFirebaseConfig = {
+          apiKey: "AIzaSyCiUjnLgq5E32J2KWwflXEbkg0lNwtoouE",
+          authDomain: "autoevaluacion-instituci-b9e6c.firebaseapp.com",
+          projectId: "autoevaluacion-instituci-b9e6c",
+          storageBucket: "autoevaluacion-instituci-b9e6c.firebasestorage.app",
+          messagingSenderId: "893209120168",
+          appId: "1:893209120168:web:93042ad54e6fd4d98de19d"
+        };
+
+        const firebaseConfig = typeof window.__firebase_config !== 'undefined' 
+          ? JSON.parse(window.__firebase_config) 
+          : fallbackFirebaseConfig;
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'maac-app-id';
+
+        // ============================================================================
+        // 4. DATOS MAESTROS (12 Factores)
+        // ============================================================================
+        const FULL_DATA = [
+          {
+            id: "f1", title: "1. Identidad Institucional",
+            characteristics: [{ id: "f1_c1", title: "1.1 Proyecto Educativo Institucional (PEI)", description: "Coherencia, pertinencia y apropiación del Proyecto Educativo Institucional por parte de la comunidad académica.", evidences: ["Documento PEI actualizado", "Estrategias de difusión", "Encuestas de apropiación institucional"] }]
+          },
+          {
+            id: "f2", title: "2. Gobierno Institucional y Transparencia",
+            characteristics: [{ id: "f2_c1", title: "2.1 Órganos de Gobierno y Dirección", description: "Eficacia y transparencia de los máximos órganos de gobierno en la toma de decisiones institucionales.", evidences: ["Actas de Consejo Superior/Directivo", "Rendición de cuentas", "Políticas de buen gobierno"] }]
+          },
+          {
+            id: "f3", title: "3. Desarrollo, Gestión y Sostenibilidad",
+            characteristics: [{ id: "f3_c1", title: "3.1 Gestión Administrativa y Financiera", description: "Capacidad de la institución para gestionar sus recursos de forma eficiente y garantizar su sostenibilidad a largo plazo.", evidences: ["Estados financieros auditados", "Plan de Desarrollo Institucional", "Ejecución presupuestal"] }]
+          },
+          {
+            id: "f4", title: "4. Mejoramiento Continuo y Autorregulación",
+            characteristics: [{ id: "f4_c1", title: "4.1 Sistema Interno de Aseguramiento de la Calidad (SIAC)", description: "Existencia y funcionamiento de un sistema consolidado que promueva la cultura de la calidad en toda la institución.", evidences: ["Documento rector del SIAC", "Informes de autoevaluación previos", "Planes de mejoramiento institucionales"] }]
+          },
+          {
+            id: "f5", title: "5. Estudiantes",
+            characteristics: [{ id: "f5_c1", title: "5.1 Admisión, Permanencia y Graduación", description: "Políticas institucionales transparentes para la selección, apoyo para mitigar la deserción y seguimiento a la graduación.", evidences: ["Reglamento estudiantil", "Estrategias de permanencia y retención", "Estadísticas de deserción institucional"] }]
+          },
+          {
+            id: "f6", title: "6. Profesores",
+            characteristics: [{ id: "f6_c1", title: "6.1 Desarrollo y Estatuto Profesoral", description: "Garantías institucionales para la vinculación, permanencia, escalafón y desarrollo integral de la planta docente.", evidences: ["Estatuto Docente", "Plan de formación y cualificación docente", "Evaluación de desempeño profesoral"] }]
+          },
+          {
+            id: "f7", title: "7. Egresados",
+            characteristics: [{ id: "f7_c1", title: "7.1 Seguimiento y Vinculación de Egresados", description: "Estrategias institucionales para mantener un vínculo activo con los egresados y medir su impacto en el medio.", evidences: ["Sistema de información de egresados", "Estudios de impacto institucional", "Programas de educación continua"] }]
+          },
+          {
+            id: "f8", title: "8. Bienestar Institucional",
+            characteristics: [{ id: "f8_c1", title: "8.1 Políticas y Programas de Bienestar", description: "Desarrollo de estrategias integrales que promuevan la calidad de vida de toda la comunidad institucional.", evidences: ["Política de bienestar universitario", "Presupuesto ejecutado en bienestar", "Indicadores de cobertura e impacto"] }]
+          },
+          {
+            id: "f9", title: "9. Investigación, Innovación y Creación",
+            characteristics: [{ id: "f9_c1", title: "9.1 Sistema Institucional de Investigación", description: "Políticas, recursos and estructura para el fomento de la investigación, la innovación y la creación artística.", evidences: ["Política de investigación institucional", "Grupos categorizados en Minciencias", "Producción intelectual e innovación"] }]
+          },
+          {
+            id: "f10", title: "10. Extensión e Impacto Social",
+            characteristics: [{ id: "f10_c1", title: "10.1 Proyección Social y Relación con el Entorno", description: "Impacto de la institución en la sociedad a través de consultorías, proyectos de extensión y relacionamiento con el sector productivo.", evidences: ["Proyectos de extensión solidaria", "Convenios de cooperación", "Indicadores de impacto social"] }]
+          },
+          {
+            id: "f11", title: "11. Visibilidad Nacional e Internacional",
+            characteristics: [{ id: "f11_c1", title: "11.1 Internacionalización y Movilidad", description: "Inserción de la institución en redes globales, movilidad entrante y saliente, e internacionalización del currículo.", evidences: ["Política de internacionalización", "Convenios activos", "Cifras de movilidad institucional"] }]
+          },
+          {
+            id: "f12", title: "12. Recursos e Infraestructura",
+            characteristics: [{ id: "f12_c1", title: "12.1 Campus e Infraestructura Tecnológica", description: "Disponibilidad y adecuación de espacios físicos, recursos bibliográficos y plataformas tecnológicas para el desarrollo misional.", evidences: ["Plan maestro de infraestructura", "Inventario tecnológico y de software", "Suscripciones a bases de datos"] }]
+          }
+        ];
+
+        const factorIcons = [ 
+          <BookOpen size={18}/>, <ShieldCheck size={18}/>, <TrendingUp size={18}/>, 
+          <Settings size={18}/>, <Users size={18}/>, <UserCheck size={18}/>, 
+          <GraduationCap size={18}/>, <Heart size={18}/>, <Lightbulb size={18}/>, 
+          <Globe size={18}/>, <Globe size={18}/>, <Monitor size={18}/> 
+        ];
+
+        // ============================================================================
+        // 5. FUNCIONES DE UTILIDAD
+        // ============================================================================
+        function base64ToArrayBuffer(base64) {
+          const binaryString = window.atob(base64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+          return bytes.buffer;
+        }
+
+        function pcmToWav(pcm16Data, sampleRate) {
+          const buffer = new ArrayBuffer(44 + pcm16Data.length * 2);
+          const view = new DataView(buffer);
+          const writeString = (view, offset, string) => { for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i)); };
+          writeString(view, 0, 'RIFF');
+          view.setUint32(4, 36 + pcm16Data.length * 2, true);
+          writeString(view, 8, 'WAVE');
+          writeString(view, 12, 'fmt ');
+          view.setUint32(16, 16, true);
+          view.setUint16(20, 1, true);
+          view.setUint16(22, 1, true);
+          view.setUint32(24, sampleRate, true);
+          view.setUint32(28, sampleRate * 2, true);
+          view.setUint16(32, 2, true);
+          view.setUint16(34, 16, true);
+          writeString(view, 36, 'data');
+          view.setUint32(40, pcm16Data.length * 2, true);
+          for (let i = 0; i < pcm16Data.length; i++) view.setInt16(44 + i * 2, pcm16Data[i], true);
+          return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+        const getLevelLabel = (lvl) => {
+          switch(lvl) {
+            case 1: return "1 - Inicial";
+            case 2: return "2 - En Desarrollo";
+            case 3: return "3 - Consolidado";
+            case 4: return "4 - Excelente";
+            case 5: return "5 - Sobresaliente / Líder";
+            default: return "No evaluado";
+          }
+        };
+
+        // ============================================================================
+        // 6. COMPONENTE: Dashboard
+        // ============================================================================
+        const Dashboard = ({ assessmentsList, onNavigate, onCallAI }) => {
+          const [executiveSummary, setExecutiveSummary] = useState("");
+          const [summaryLoading, setSummaryLoading] = useState(false);
+          const [isSpeaking, setIsSpeaking] = useState(false);
+          const [ttsLoading, setTtsLoading] = useState(false);
+          const audioRef = useRef(null);
+
+          const factorScores = useMemo(() => {
+            return FULL_DATA.map(factor => {
+              let totalScore = 0;
+              let totalAdminScore = 0;
+              let answeredCount = 0;
+              
+              factor.characteristics.forEach(char => {
+                const charAssessments = assessmentsList.filter(a => a.charId === char.id);
+                if (charAssessments.length > 0) {
+                  const latest = charAssessments[0]; 
+                  totalScore += (latest.score || 0);
+                  if (latest.adminScore) totalAdminScore += latest.adminScore;
+                  answeredCount++;
+                }
+              });
+              const progress = (answeredCount / factor.characteristics.length) * 100;
+              const avgNumericScore = answeredCount > 0 ? (totalScore / answeredCount) : 0;
+              const avgAdminScore = answeredCount > 0 ? (totalAdminScore / answeredCount) : 0;
+              
+              return { ...factor, progress, avgNumericScore, avgAdminScore, answeredCount };
+            });
+          }, [assessmentsList]);
+
+          const globalProgress = factorScores.reduce((acc, curr) => acc + curr.progress, 0) / 12;
+          const evaluatedAssessments = factorScores.filter(f => f.answeredCount > 0);
+          const globalNumericScore = evaluatedAssessments.length > 0 
+            ? evaluatedAssessments.reduce((acc, curr) => acc + curr.avgNumericScore, 0) / evaluatedAssessments.length 
+            : 0;
+
+          const handleGenerateSummary = async () => {
+            if (audioRef.current) { audioRef.current.pause(); setIsSpeaking(false); }
+            setSummaryLoading(true);
+            const strongest = factorScores.filter(f => f.avgNumericScore >= 4.0).map(f => f.title).join(", ") || "Ninguno";
+            const critical = factorScores.filter(f => f.avgNumericScore < 2.5 && f.answeredCount > 0).map(f => f.title).join(", ") || "Ninguno";
+
+            const prompt = `Actúa como auditor experto de acreditación institucional. Genera un resumen ejecutivo estratégico basado en: Progreso de autoevaluación: ${globalProgress.toFixed(0)}%. Nota promedio de profesores: ${globalNumericScore.toFixed(2)} sobre 5.0. Factores fuertes detectados (>=4.0): ${strongest}. Factores críticos detectados (<2.5): ${critical}. Incluye recomendaciones estratégicas institucionales concretas en un lenguaje asertivo y formal.`;
+            const response = await onCallAI(prompt);
+            if (response) setExecutiveSummary(response);
+            setSummaryLoading(false);
+          };
+
+          const handleListenSummary = async () => {
+            if (isSpeaking) {
+              if (audioRef.current) audioRef.current.pause();
+              setIsSpeaking(false);
+              return;
+            }
+            if (!executiveSummary) return;
+            setTtsLoading(true);
+            try {
+              const apiKey = "AQ.Ab8RN6ICKykz6oChjiXmASWosG5JkRNDwlrbL55029wTycKX-w"; 
+              const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+              const payload = {
+                contents: [{ parts: [{ text: `Resumen de Análisis Institucional IA. ${executiveSummary.replace(/[*#]/g, '')}` }] }],
+                generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Sulafat" } } } }
+              };
+              const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+              if (!response.ok) throw new Error("TTS Error");
+              const result = await response.json();
+              const audioData = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+              if (audioData) {
+                const wavBlob = pcmToWav(new Int16Array(base64ToArrayBuffer(audioData)), 24000);
+                const audio = new Audio(URL.createObjectURL(wavBlob));
+                audioRef.current = audio;
+                audio.play();
+                setIsSpeaking(true);
+                audio.onended = () => setIsSpeaking(false);
+              }
+            } catch (error) {
+              console.error(error);
+            } finally {
+              setTtsLoading(false);
+            }
+          };
+
+          return (
+            <div className="p-6 max-w-6xl mx-auto">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+                <h2 className="text-3xl font-bold text-gray-800 flex items-center">
+                  <BarChart2 className="mr-3 text-blue-600" /> Tablero de Síntesis Institucional
+                </h2>
+                <button onClick={handleGenerateSummary} disabled={summaryLoading} className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md transition-all flex items-center">
+                  {summaryLoading ? <Loader2 size={18} className="animate-spin mr-2" /> : <Sparkles size={18} className="mr-2 text-yellow-300" />}
+                  ✨ Resumen IA
+                </button>
+              </div>
+
+              {executiveSummary && (
+                <div className="bg-gradient-to-r from-indigo-50 to-blue-50 p-6 rounded-xl shadow-sm border border-indigo-200 mb-8 relative">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="font-bold text-indigo-900 flex items-center"><Zap size={20} className="mr-2 text-indigo-600" /> Insights Generados por IA</h3>
+                    <button onClick={handleListenSummary} disabled={ttsLoading} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white border border-indigo-200 text-indigo-800 hover:bg-indigo-100">
+                      {ttsLoading ? <Loader2 size={14} className="animate-spin" /> : isSpeaking ? <><VolumeX size={14} /> Detener</> : <><Volume2 size={14} className="text-indigo-600" /> Escuchar</>}
+                    </button>
+                  </div>
+                  <div className="text-indigo-800 text-sm leading-relaxed whitespace-pre-wrap">{executiveSummary}</div>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-600">
+                  <h3 className="text-gray-500 font-medium text-sm">Progreso Global</h3>
+                  <p className="text-3xl font-bold text-gray-800 mt-2">{globalProgress.toFixed(1)}%</p>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-4"><div className="bg-blue-600 h-2 rounded-full transition-all" style={{ width: `${globalProgress}%` }}></div></div>
+                </div>
+                <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-indigo-600">
+                  <h3 className="text-gray-500 font-medium text-sm flex items-center gap-1">Nota Promedio Profe <Info size={14} className="text-gray-400" /></h3>
+                  <p className="text-3xl font-extrabold text-indigo-700 mt-2">{globalNumericScore.toFixed(2)} <span className="text-sm font-semibold text-gray-400">/ 5.0</span></p>
+                </div>
+                <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-emerald-500">
+                  <h3 className="text-gray-500 font-medium text-sm">Factores Fuertes (Nota {">"}= 4.0)</h3>
+                  <p className="text-3xl font-bold text-gray-800 mt-2">{factorScores.filter(f => f.avgNumericScore >= 4.0 && f.answeredCount > 0).length}</p>
+                </div>
+                <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-red-500">
+                  <h3 className="text-gray-500 font-medium text-sm">Factores Críticos (Nota {"<"} 2.5)</h3>
+                  <p className="text-3xl font-bold text-gray-800 mt-2">{factorScores.filter(f => f.avgNumericScore < 2.5 && f.answeredCount > 0).length}</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200">
+                      <th className="p-4 font-semibold text-gray-700">Factor Institucional</th>
+                      <th className="p-4 font-semibold text-gray-700 text-center">Progreso</th>
+                      <th className="p-4 font-semibold text-gray-700 text-center">Nota Promedio</th>
+                      <th className="p-4 font-semibold text-gray-700 text-center">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {factorScores.map((factor, idx) => (
+                      <tr key={factor.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="p-4 font-medium text-gray-800">{factor.title}</td>
+                        <td className="p-4">
+                          <div className="flex items-center justify-center">
+                            <span className="text-sm mr-2 w-8 text-right">{factor.progress.toFixed(0)}%</span>
+                            <div className="w-24 bg-gray-200 rounded-full h-1.5"><div className={`h-1.5 rounded-full ${factor.progress === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{ width: `${factor.progress}%` }}></div></div>
+                          </div>
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                            factor.avgNumericScore >= 4.0 ? 'bg-emerald-100 text-emerald-800' : 
+                            factor.avgNumericScore >= 3.0 ? 'bg-blue-100 text-blue-800' : 
+                            factor.answeredCount > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {factor.answeredCount > 0 ? `${factor.avgNumericScore.toFixed(2)} / 5.0` : 'N/A'}
+                          </span>
+                        </td>
+                        <td className="p-4 text-center">
+                          <button onClick={() => onNavigate(idx)} className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center justify-center w-full">
+                            Evaluar <ChevronRight size={16} className="ml-1"/>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        };
+
+        // ============================================================================
+        // 7. COMPONENTE: AdminPanel
+        // ============================================================================
+        const AdminPanel = ({ assessmentsList, onReview }) => {
+          return (
+            <div className="p-6 max-w-6xl mx-auto">
+              <h2 className="text-3xl font-bold text-gray-800 flex items-center mb-6">
+                <UserCog className="mr-3 text-emerald-600" /> Panel de Administrador Institucional
+              </h2>
+              
+              <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-gray-100 border-b border-gray-200">
+                      <th className="p-4 font-semibold text-gray-700">Profesor</th>
+                      <th className="p-4 font-semibold text-gray-700">Característica</th>
+                      <th className="p-4 font-semibold text-gray-700 text-center">Nota Profe (1-5)</th>
+                      <th className="p-4 font-semibold text-gray-700 text-center">Nota Admin Final (1.0 - 5.0)</th>
+                      <th className="p-4 font-semibold text-gray-700 text-center">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {assessmentsList.map((record) => (
+                      <tr key={record.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="p-4 font-medium text-blue-800">{record.profName}</td>
+                        <td className="p-4 text-gray-600">
+                          <div className="font-semibold text-gray-800 truncate max-w-xs" title={record.charTitle}>{record.charTitle}</div>
+                          <div className="text-xs">{record.factorTitle}</div>
+                        </td>
+                        <td className="p-4 text-center font-bold text-blue-600">{record.score || '-'}</td>
+                        <td className="p-4 text-center">
+                          {record.adminScore ? (
+                             <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded font-bold">{parseFloat(record.adminScore).toFixed(1)}</span>
+                          ) : (
+                             <span className="text-gray-400 italic">Pendiente</span>
+                          )}
+                        </td>
+                        <td className="p-4 text-center">
+                          <button 
+                            onClick={() => {
+                              const fIdx = FULL_DATA.findIndex(f => f.id === record.factorId);
+                              if(fIdx >= 0) {
+                                const cIdx = FULL_DATA[fIdx].characteristics.findIndex(c => c.id === record.charId);
+                                if(cIdx >= 0) onReview(record.profName, fIdx, cIdx);
+                              }
+                            }}
+                            className="text-emerald-600 hover:text-emerald-800 font-medium bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg inline-flex items-center"
+                          >
+                            Revisar y Calificar <ChevronRight size={14} className="ml-1"/>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {assessmentsList.length === 0 && (
+                      <tr><td colSpan="5" className="p-8 text-center text-gray-500">No hay evaluaciones enviadas por los profesores aún.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        };
+
+        // ============================================================================
+        // 8. COMPONENTE PRINCIPAL: AutoevaluacionMAAC
+        // ============================================================================
+        function AutoevaluacionMAAC() {
+          const [user, setUser] = useState(null);
+          const [role, setRole] = useState('profesor'); 
+          const [view, setView] = useState('assessment'); 
+          const [activeFactorIndex, setActiveFactorIndex] = useState(0);
+          const [activeCharIndex, setActiveCharIndex] = useState(0);
+          const [activeTab, setActiveTab] = useState('notes'); 
+          const [profName, setProfName] = useState("Profesor Demo"); 
+          
+          const [assessmentsList, setAssessmentsList] = useState([]);
+          
+          const [currentForm, setCurrentForm] = useState({
+            score: 1.0, 
+            aiSuggestedScore: 0, 
+            observations: "", 
+            fortalezas: "", 
+            oportunidades: "", 
+            planMejoramiento: "",
+            documentInsights: null, 
+            isAnalyzingFile: false, 
+            fileName: null,
+            adminScore: 1.0, 
+            adminFeedback: ""
+          });
+
+          const [isSaving, setIsSaving] = useState(false);
+          const [chatHistory, setChatHistory] = useState([]); 
+          const [chatInput, setChatInput] = useState("");
+          const [chatLoading, setChatLoading] = useState(false);
+          const chatEndRef = useRef(null);
+
+          const activeFactor = FULL_DATA[activeFactorIndex];
+          const activeChar = activeFactor.characteristics[activeCharIndex];
+
+          useEffect(() => {
+            const initAuth = async () => {
+              try {
+                if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
+                  await signInWithCustomToken(auth, window.__initial_auth_token);
+                } else {
+                  await signInAnonymously(auth);
+                }
+              } catch (err) {
+                console.error("Auth error", err);
+              }
+            };
+            initAuth();
+            const unsubscribe = onAuthStateChanged(auth, setUser);
+            return () => unsubscribe();
+          }, []);
+
+          useEffect(() => {
+            if (!user) return;
+            const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'maac_assessments');
+            const q = query(collectionRef);
+            
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+              const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+              setAssessmentsList(data);
+            }, (error) => {
+              console.error("Firestore error", error);
+            });
+            return () => unsubscribe();
+          }, [user]);
+
+          useEffect(() => {
+            if (!user) return;
+            const existingRecord = assessmentsList.find(a => a.charId === activeChar.id && a.profName === profName);
+            
+            if (existingRecord) {
+              setCurrentForm({
+                score: existingRecord.score || 1.0,
+                aiSuggestedScore: existingRecord.aiSuggestedScore || 0,
+                observations: existingRecord.observations || "",
+                fortalezas: existingRecord.fortalezas || "",
+                oportunidades: existingRecord.oportunidades || "",
+                planMejoramiento: existingRecord.planMejoramiento || "",
+                documentInsights: existingRecord.documentInsights || null,
+                fileName: existingRecord.fileName || null,
+                isAnalyzingFile: false,
+                adminScore: existingRecord.adminScore || 1.0,
+                adminFeedback: existingRecord.adminFeedback || ""
+              });
+              setChatHistory(existingRecord.chatHistory || []);
+            } else {
+              setCurrentForm({
+                score: 1.0, aiSuggestedScore: 0, observations: "", fortalezas: "", oportunidades: "", 
+                planMejoramiento: "", documentInsights: null, fileName: null, isAnalyzingFile: false,
+                adminScore: 1.0, adminFeedback: ""
+              });
+              setChatHistory([]);
+            }
+          }, [activeChar.id, assessmentsList, profName, user]);
+
+          const handleSaveToFirebase = async () => {
+            if (!user) return;
+            setIsSaving(true);
+            try {
+              const docId = `${profName.replace(/\s+/g, '_')}_${activeChar.id}`;
+              const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'maac_assessments', docId);
+              
+              const payload = {
+                userId: user.uid, 
+                profName, 
+                factorId: activeFactor.id,
+                factorTitle: activeFactor.title, 
+                charId: activeChar.id, 
+                charTitle: activeChar.title,
+                score: currentForm.score, 
+                aiSuggestedScore: currentForm.aiSuggestedScore,
+                observations: currentForm.observations,
+                fortalezas: currentForm.fortalezas,
+                oportunidades: currentForm.oportunidades,
+                planMejoramiento: currentForm.planMejoramiento,
+                documentInsights: currentForm.documentInsights,
+                fileName: currentForm.fileName, 
+                chatHistory: chatHistory,
+                adminScore: currentForm.adminScore, 
+                adminFeedback: currentForm.adminFeedback,
+                updatedAt: serverTimestamp()
+              };
+              
+              await setDoc(docRef, payload, { merge: true });
+              setTimeout(() => setIsSaving(false), 800);
+            } catch (err) {
+              console.error("Error guardando", err);
+              setIsSaving(false);
+            }
+          };
+
+          const callGeminiAPI = async (prompt, inlineData = null, expectJson = false) => {
+            const apiKey = ""; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            const parts = [{ text: prompt }];
+            if (inlineData) parts.push({ inlineData });
+
+            const payload = {
+                contents: [{ parts }],
+                systemInstruction: { parts: [{ text: "Actúa como experto auditor de acreditación y calidad de Instituciones de Educación Superior." }] }
+            };
+
+            if (expectJson) {
+              payload.generationConfig = {
+                responseMimeType: "application/json",
+                responseSchema: {
+                  type: "OBJECT",
+                  properties: { resumen: { type: "STRING" }, notaSugerida: { type: "INTEGER" } }
+                }
+              };
+            }
+
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const result = await response.json();
+                return result.candidates?.[0]?.content?.parts?.[0]?.text;
+            } catch (error) {
+                console.error(error);
+                return expectJson ? JSON.stringify({ resumen: "Error analizando documento.", notaSugerida: 0 }) : "Error conectando con la IA.";
+            }
+          };
+
+          const handleFileUpload = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            setCurrentForm(prev => ({ ...prev, isAnalyzingFile: true, fileName: file.name }));
+
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+              const base64String = reader.result.split(',')[1];
+              const inlineData = { mimeType: file.type || "text/plain", data: base64String };
+
+              const prompt = `Actúa como auditor experto en acreditación de Instituciones de Educación Superior. Analiza el documento subido como evidencia para la característica: "${activeChar.title}". Extrae un resumen exhaustivo y detallado del documento cargado. Además, asume una postura de auditoría para justificar de manera técnica y estructurada la calificación tentativa (Nivel de madurez institucional del 1 al 5, donde 1=Inicial, 2=Desarrollo, 3=Consolidado, 4=Excelente, 5=Sobresaliente/Líder) basada estrictamente en las evidencias presentadas en el documento. Devuelve la respuesta estructurada en JSON con las propiedades 'resumen' (que incluya el análisis completo y la justificación técnica) y 'notaSugerida' (entero del 1 al 5).`;
+
+              const responseText = await callGeminiAPI(prompt, inlineData, true);
+              
+              try {
+                const resultJson = JSON.parse(responseText);
+                setCurrentForm(prev => ({ 
+                  ...prev, isAnalyzingFile: false, 
+                  documentInsights: resultJson.resumen, aiSuggestedScore: resultJson.notaSugerida
+                }));
+              } catch (err) {
+                setCurrentForm(prev => ({ ...prev, isAnalyzingFile: false, documentInsights: responseText }));
+              }
+            };
+            reader.readAsDataURL(file);
+          };
+
+          const handleGenerateDraft = async () => {
+            const prompt = `Redacta un diagnóstico técnico y estructurado para la característica institucional: "${activeChar.title}". El profesor ha autoevaluado con nota de ${currentForm.score}/5. El archivo de soporte arrojó este resumen descriptivo: "${currentForm.documentInsights || 'Sin archivo de soporte'}". 
+            Genera un objeto JSON estructurado con tres secciones claras que llenen objetivamente la evaluación del docente:
+            - fortalezas: Lista estructurada que demuestre las fortalezas evidentes y reales de la institución sobre esta característica.
+            - oportunidades: Lista con los aspectos específicos que se identifican como brechas u oportunidades para avanzar.
+            - planMejoramiento: Acciones operativas y metodológicas propuestas para consolidar el nivel de madurez o ascender de nivel.`;
+
+            setCurrentForm(prev => ({ 
+              ...prev, fortalezas: "Generando fortalezas técnicas...", oportunidades: "Generando oportunidades técnicas...", planMejoramiento: "Generando plan operativo..." 
+            }));
+
+            const apiKey = ""; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const payload = {
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                  type: "OBJECT",
+                  properties: { fortalezas: { type: "STRING" }, oportunidades: { type: "STRING" }, planMejoramiento: { type: "STRING" } }
+                }
+              }
+            };
+
+            try {
+              const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+              if (!response.ok) throw new Error("API call failed");
+              const result = await response.json();
+              const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+              const parsed = JSON.parse(rawText);
+              setCurrentForm(prev => ({
+                ...prev, fortalezas: parsed.fortalezas, oportunidades: parsed.oportunidades, planMejoramiento: parsed.planMejoramiento
+              }));
+            } catch (err) {
+              console.error(err);
+              setCurrentForm(prev => ({
+                ...prev, fortalezas: "Error al generar.", oportunidades: "Error al generar.", planMejoramiento: "Error al generar."
+              }));
+            }
+          };
+
+          const handleSendChatMessage = async (e) => {
+            e.preventDefault();
+            if (!chatInput.trim()) return;
+
+            const userMsg = { role: "user", text: chatInput };
+            const newHistory = [...chatHistory, userMsg];
+            setChatInput("");
+            setChatHistory(newHistory);
+            setChatLoading(true);
+
+            setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+
+            const prompt = `Eres un consultor de acreditación académica sobre la característica "${activeChar.title}". El profesor ha cargado un archivo con este resumen objetivo: "${currentForm.documentInsights || 'No se cargó archivo soporte'}". Responde detalladamente a la siguiente duda técnica:\nHistorial:\n${newHistory.map(m => `${m.role}: ${m.text}`).join('\n')}`;
+            
+            const responseText = await callGeminiAPI(prompt);
+            setChatHistory([...newHistory, { role: "model", text: responseText }]);
+            setChatLoading(false);
+            setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+          };
+
+          const nextChar = () => {
+            if (activeCharIndex < activeFactor.characteristics.length - 1) setActiveCharIndex(activeCharIndex + 1);
+            else if (activeFactorIndex < FULL_DATA.length - 1) { setActiveFactorIndex(activeFactorIndex + 1); setActiveCharIndex(0); }
+          };
+
+          const prevChar = () => {
+            if (activeCharIndex > 0) setActiveCharIndex(activeCharIndex - 1);
+            else if (activeFactorIndex > 0) { setActiveFactorIndex(activeFactorIndex - 1); setActiveCharIndex(FULL_DATA[activeFactorIndex - 1].characteristics.length - 1); }
+          };
+
+          const getAdminScoreColor = (score) => {
+            if (score < 2.0) return "bg-red-500"; if (score < 3.0) return "bg-orange-500"; if (score < 4.0) return "bg-yellow-500";
+            if (score < 4.6) return "bg-blue-500"; return "bg-emerald-500";
+          };
+
+          const getAdminScoreTextColor = (score) => {
+            if (score < 2.0) return "text-red-600"; if (score < 3.0) return "text-orange-600"; if (score < 4.0) return "text-yellow-600";
+            if (score < 4.6) return "text-blue-600"; return "text-emerald-600";
+          };
+
+          return (
+            <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-800">
+              {/* HEADER */}
+              <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
+                <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg text-white ${role === 'admin' ? 'bg-emerald-600' : 'bg-blue-600'}`}>
+                      {role === 'admin' ? <Server size={24} /> : <ShieldCheck size={24} />}
+                    </div>
+                    <div>
+                      <h1 className="font-bold text-xl leading-tight">Auto-MAAC Institucional 2025</h1>
+                      <p className="text-xs text-gray-500 font-medium">Sesión: {role === 'admin' ? 'Administrador General' : `Profesor (${profName})`}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
+                      <button onClick={() => { setRole('profesor'); setView('assessment'); }} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${role === 'profesor' ? 'bg-white shadow text-blue-700' : 'text-gray-500'}`}>Profesor</button>
+                      <button onClick={() => { setRole('admin'); setView('adminPanel'); }} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${role === 'admin' ? 'bg-white shadow text-emerald-700' : 'text-gray-500'}`}>Admin</button>
+                    </div>
+                    <div className="h-6 w-px bg-gray-300 mx-1"></div>
+                    <button onClick={() => setView('assessment')} className={`px-4 py-2 rounded-md font-medium text-sm flex items-center ${view === 'assessment' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'} hidden md:flex`}><FileText size={16} className="mr-2"/> Autoevaluación</button>
+                    <button onClick={() => setView('dashboard')} className={`px-4 py-2 rounded-md font-medium text-sm flex items-center ${view === 'dashboard' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'} hidden md:flex`}><BarChart2 size={16} className="mr-2"/> Tablero</button>
+                  </div>
+                </div>
+              </header>
+
+              <div className="flex flex-1 overflow-hidden">
+                {view === 'assessment' && (
+                  <>
+                    {/* SIDEBAR FACTORES */}
+                    <aside className="w-80 bg-white border-r border-gray-200 overflow-y-auto hidden md:block">
+                      <div className="p-4 border-b border-gray-100"><h3 className="text-xs font-bold text-gray-400 uppercase mb-3">Navegación de Factores</h3></div>
+                      <ul className="py-2">
+                        {FULL_DATA.map((factor, idx) => (
+                          <li key={factor.id}>
+                            <button onClick={() => { setActiveFactorIndex(idx); setActiveCharIndex(0); }} className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors ${activeFactorIndex === idx ? (role === 'admin' ? 'bg-emerald-50 border-emerald-600' : 'bg-blue-50 border-blue-600') + ' border-r-4' : 'hover:bg-gray-50'}`}>
+                              <div className={`mt-0.5 ${activeFactorIndex === idx ? (role === 'admin' ? 'text-emerald-600' : 'text-blue-600') : 'text-gray-400'}`}>{factorIcons[idx % factorIcons.length]}</div>
+                              <div className="flex-1"><span className={`text-sm font-medium leading-tight ${activeFactorIndex === idx ? 'text-gray-900' : 'text-gray-600'}`}>{factor.title}</span></div>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </aside>
+
+                    {/* MAIN ASSESSMENT CONTENT */}
+                    <main className="flex-1 overflow-y-auto bg-gray-50 p-6 custom-scrollbar">
+                      <div className="max-w-4xl mx-auto pb-20">
+                        {role === 'admin' && (
+                           <div className="bg-emerald-100 border border-emerald-300 text-emerald-800 p-4 rounded-xl mb-4 flex items-center font-bold">
+                             <UserCog className="mr-2" /> Modo Administrador: Revisando evaluación de {profName}
+                           </div>
+                        )}
+                        <div className="mb-2 text-sm font-medium text-gray-500 flex items-center">
+                          {activeFactor.title} <ChevronRight size={14} className="mx-1"/> Característica {activeCharIndex + 1} de {activeFactor.characteristics.length}
+                        </div>
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 mb-6">
+                          <h2 className="text-2xl font-bold text-gray-900 mb-3">{activeChar.title}</h2>
+                          <p className="text-gray-600 text-sm leading-relaxed mb-6">{activeChar.description}</p>
+
+                          {/* FASE 1: Subida de Archivo e IA */}
+                          <div className="bg-indigo-50 p-5 rounded-xl border border-indigo-100 mb-6 relative">
+                            <span className="absolute -top-3 left-4 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full">Fase 1: Evidencia & IA</span>
+                            <div className="mt-2 flex justify-between items-start mb-3">
+                              <div><h3 className="font-semibold text-indigo-900 text-sm flex items-center"><Upload size={16} className="mr-2 text-indigo-600"/> Copiloto IA: Cargar soporte</h3><p className="text-xs text-indigo-700 mt-1 mb-3">Carga un informe soporte (PDF/Txt) para que la IA elabore un resumen descriptivo sin juicios de valor.</p></div>
+                            </div>
+                            <input type="file" accept=".pdf,.txt,.csv" onChange={handleFileUpload} disabled={currentForm.isAnalyzingFile || role === 'admin'} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer disabled:opacity-50"/>
+                            {currentForm.isAnalyzingFile && (<div className="mt-4 flex items-center text-sm text-indigo-700 font-medium bg-indigo-100 p-3 rounded-lg animate-pulse"><Loader2 className="animate-spin mr-2" size={18}/> Leyendo documento y calculando sugerencia...</div>)}
+                            {currentForm.documentInsights && !currentForm.isAnalyzingFile && (
+                              <div className="mt-4 bg-white p-5 rounded-xl border border-indigo-200 shadow-sm">
+                                <div className="font-bold text-indigo-900 mb-2 flex items-center text-sm"><Sparkles size={16} className="mr-2 text-amber-500"/> Resumen Objetivo: {currentForm.fileName}</div>
+                                <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed mb-3">{currentForm.documentInsights}</div>
+                                <div className="inline-flex bg-indigo-100 text-indigo-800 px-3 py-1.5 rounded-lg text-sm font-bold items-center"><Award size={16} className="mr-2" /> Nivel Sugerido: {currentForm.aiSuggestedScore} / 5</div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* FASE 2: Calificación Profesor */}
+                          <div className="mb-6 border border-gray-200 p-5 rounded-xl relative mt-8">
+                            <span className="absolute -top-3 left-4 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full">Fase 2: Calificación Profesor</span>
+                            <div className="mt-2 flex flex-col gap-6">
+                               <div className="w-full">
+                                 <div className="flex justify-between items-center mb-2">
+                                   <label className="text-sm font-bold text-gray-800">Medidor de Calificación (Autoevaluación):</label>
+                                   <span className={`text-2xl font-extrabold px-3 py-1 rounded-lg bg-white shadow-inner border border-blue-200 ${getAdminScoreTextColor(currentForm.score)}`}>{parseFloat(currentForm.score || 1.0).toFixed(1)} / 5.0</span>
+                                 </div>
+                                 <div className="space-y-4">
+                                   <input type="range" min="1.0" max="5.0" step="0.1" value={currentForm.score || 1.0} onChange={(e) => setCurrentForm(p => ({...p, score: parseFloat(e.target.value)}))} disabled={role === 'admin'} className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none disabled:opacity-50"/>
+                                   <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden relative border border-gray-300 shadow-sm">
+                                     <div className={`h-full transition-all duration-300 ease-out ${getAdminScoreColor(currentForm.score || 1.0)}`} style={{ width: `${((currentForm.score - 1.0) / 4.0) * 100}%` }}/>
+                                     <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700 mix-blend-difference">Nivel: {currentForm.score >= 4.6 ? 'Excelente' : currentForm.score >= 3.6 ? 'Consolidado' : currentForm.score >= 2.6 ? 'En Progreso' : 'Inicial / Alerta'}</span>
+                                   </div>
+                                 </div>
+                               </div>
+                            </div>
+                          </div>
+
+                          {/* VISTA EXCLUSIVA ADMINISTRADOR */}
+                          {role === 'admin' && (
+                             <div className="mb-6 border-2 border-emerald-400 bg-emerald-50 p-5 rounded-xl relative mt-8">
+                                <span className="absolute -top-3 left-4 bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center"><CheckSquare size={12} className="mr-1"/> Fase Admin: Nota Final Institucional</span>
+                                <div className="mt-2 flex flex-col gap-6">
+                                   <div className="w-full">
+                                     <div className="flex justify-between items-center mb-2">
+                                       <label className="text-sm font-bold text-gray-800">Medidor de Calificación Final:</label>
+                                       <span className={`text-2xl font-extrabold px-3 py-1 rounded-lg bg-white shadow-inner border border-emerald-200 ${getAdminScoreTextColor(currentForm.adminScore)}`}>{parseFloat(currentForm.adminScore || 1.0).toFixed(1)} / 5.0</span>
+                                     </div>
+                                     <div className="space-y-4">
+                                       <input type="range" min="1.0" max="5.0" step="0.1" value={currentForm.adminScore || 1.0} onChange={(e) => setCurrentForm(p => ({...p, adminScore: parseFloat(e.target.value)}))} className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-600 focus:outline-none"/>
+                                       <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden relative border border-gray-300 shadow-sm">
+                                         <div className={`h-full transition-all duration-300 ease-out ${getAdminScoreColor(currentForm.adminScore || 1.0)}`} style={{ width: `${((currentForm.adminScore - 1.0) / 4.0) * 100}%` }}/>
+                                       </div>
+                                     </div>
+                                   </div>
+                                   <div className="w-full">
+                                     <label className="block text-sm font-bold text-gray-800 mb-2">Comentarios y Feedback del Administrador:</label>
+                                     <textarea className="w-full p-3 border border-emerald-300 rounded focus:ring-emerald-500 text-sm h-24" placeholder="Feedback técnico institucional..." value={currentForm.adminFeedback} onChange={(e) => setCurrentForm(p => ({...p, adminFeedback: e.target.value}))}/>
+                                   </div>
+                                </div>
+                             </div>
+                          )}
+
+                          {/* FASE 3: Diagnóstico y Chat IA */}
+                          <div className="border border-gray-200 rounded-xl overflow-hidden mt-8 shadow-sm relative pt-4">
+                            <span className="absolute -top-3 left-4 bg-gray-600 text-white text-xs font-bold px-3 py-1 rounded-full z-10">Fase 3: Diagnóstico & Plan</span>
+                            <div className="flex bg-gray-50 border-b border-gray-200 mt-2">
+                              <button onClick={() => setActiveTab('notes')} className={`flex-1 py-3 px-4 text-sm font-semibold flex items-center justify-center gap-2 border-r border-gray-200 transition-colors ${activeTab === 'notes' ? 'bg-white text-blue-700 border-b-2 border-b-blue-600' : 'text-gray-500 hover:text-gray-800'}`}><ScrollText size={16} /> Diagnóstico</button>
+                              <button onClick={() => setActiveTab('chat')} className={`flex-1 py-3 px-4 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${activeTab === 'chat' ? 'bg-white text-blue-700 border-b-2 border-b-blue-600' : 'text-gray-500 hover:text-gray-800'}`}><MessageSquare size={16} /> Consultor IA</button>
+                            </div>
+
+                            <div className="p-5 bg-white">
+                              {activeTab === 'notes' ? (
+                                <div className="space-y-6">
+                                  <div className="flex justify-between items-center">
+                                    <h3 className="text-md font-bold text-gray-700 flex items-center"><ClipboardList className="mr-2 text-blue-600" size={18} /> Justificación Técnica</h3>
+                                    {role === 'profesor' && <button onClick={handleGenerateDraft} className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1.5 rounded-full flex items-center font-bold shadow-sm transition-all">✨ Generar borrador</button>}
+                                  </div>
+                                  <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                                    <label className="block text-sm font-bold text-emerald-800 mb-2 flex items-center"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2"></span> Fortalezas:</label>
+                                    <textarea disabled={role === 'admin'} className="w-full p-3 text-sm border border-emerald-200 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white resize-none h-24 disabled:opacity-85" placeholder="..." value={currentForm.fortalezas} onChange={(e) => setCurrentForm(p => ({...p, fortalezas: e.target.value}))}/>
+                                  </div>
+                                  <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-100">
+                                    <label className="block text-sm font-bold text-amber-800 mb-2 flex items-center"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 mr-2"></span> Oportunidades:</label>
+                                    <textarea disabled={role === 'admin'} className="w-full p-3 text-sm border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white resize-none h-24 disabled:opacity-85" placeholder="..." value={currentForm.oportunidades} onChange={(e) => setCurrentForm(p => ({...p, oportunidades: e.target.value}))}/>
+                                  </div>
+                                  <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                                    <label className="block text-sm font-bold text-blue-800 mb-2 flex items-center"><PlusCircle className="mr-2 text-blue-500" size={16} /> Plan de Mejoramiento:</label>
+                                    <textarea disabled={role === 'admin'} className="w-full p-3 text-sm border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white resize-none h-28 disabled:opacity-85" placeholder="..." value={currentForm.planMejoramiento} onChange={(e) => setCurrentForm(p => ({...p, planMejoramiento: e.target.value}))}/>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col h-96 border border-gray-200 rounded-lg bg-gray-50 overflow-hidden">
+                                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                                    {chatHistory.length === 0 && <div className="text-center text-gray-400 text-sm mt-16">Pregúntame dudas de acreditación de esta característica.</div>}
+                                    {chatHistory.map((msg, index) => (
+                                      <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                        <div className={`max-w-[85%] rounded-xl p-3 text-sm ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border shadow-sm rounded-tl-none text-gray-800'}`}>
+                                          <div className="font-bold text-xs mb-1 opacity-75">{msg.role === 'user' ? 'Tú' : 'Asesor IA'}</div>
+                                          <div className="whitespace-pre-wrap">{msg.text}</div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                    {chatLoading && <div className="text-xs text-gray-500 flex items-center"><Loader2 size={12} className="animate-spin mr-1"/> Escribiendo...</div>}
+                                    <div ref={chatEndRef} />
+                                  </div>
+                                  {role === 'profesor' && (
+                                    <form onSubmit={handleSendChatMessage} className="bg-white p-2 border-t flex gap-2">
+                                      <input type="text" className="flex-1 border rounded-lg px-3 text-sm" placeholder="Consultar con el asesor..." value={chatInput} onChange={e => setChatInput(e.target.value)} disabled={chatLoading}/>
+                                      <button type="submit" disabled={chatLoading} className="bg-indigo-600 text-white p-2 rounded-lg"><Send size={16}/></button>
+                                    </form>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="mt-8 flex justify-end pt-4 border-t border-gray-200">
+                            <button onClick={handleSaveToFirebase} disabled={isSaving} className={`px-6 py-3 rounded-xl font-bold text-white shadow-md flex items-center transition-all ${isSaving ? 'bg-gray-400' : role === 'admin' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                              {isSaving ? <Loader2 size={18} className="animate-spin mr-2"/> : <Save size={18} className="mr-2" />}
+                              {isSaving ? 'Guardando...' : role === 'admin' ? 'Guardar Calificación (Admin)' : 'Guardar y Continuar'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </main>
+
+                    <footer className="bg-white border-t border-gray-200 p-4 flex justify-between items-center z-10 sticky bottom-0">
+                      <button onClick={prevChar} disabled={activeFactorIndex === 0 && activeCharIndex === 0} className="px-5 py-2.5 rounded-lg font-medium text-sm flex items-center text-gray-600 hover:bg-gray-100 disabled:opacity-30"><ChevronLeft size={18} className="mr-1"/> Anterior</button>
+                      <button onClick={nextChar} className={`text-white px-6 py-2.5 rounded-lg font-medium text-sm flex items-center shadow-sm ${role === 'admin' ? 'bg-emerald-600' : 'bg-blue-600'}`}>
+                        {activeFactorIndex === FULL_DATA.length - 1 && activeCharIndex === activeFactor.characteristics.length - 1 ? 'Finalizar' : 'Siguiente'}
+                        <ChevronRight size={18} className="ml-1"/>
+                      </button>
+                    </footer>
+                  </>
+                )}
+                
+                {view === 'dashboard' && <div className="flex-1 overflow-y-auto w-full"><Dashboard assessmentsList={assessmentsList} onNavigate={(idx) => { setActiveFactorIndex(idx); setActiveCharIndex(0); setView('assessment'); }} onCallAI={callGeminiAPI} /></div>}
+                {view === 'adminPanel' && <div className="flex-1 overflow-y-auto w-full bg-gray-50"><AdminPanel assessmentsList={assessmentsList} onReview={(prof, fIdx, cIdx) => { setProfName(prof); setActiveFactorIndex(fIdx); setActiveCharIndex(cIdx); setView('assessment'); }} /></div>}
+              </div>
+            </div>
+          );
+        }
+
+        // ============================================================================
+        // 9. RENDERIZADO RAÍZ
+        // ============================================================================
+        const rootElement = document.getElementById('root');
+        const root = createRoot(rootElement);
+        root.render(<AutoevaluacionMAAC />);
+
+    </script>
+</body>
+</html>
