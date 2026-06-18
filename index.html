@@ -12,21 +12,30 @@
 
   <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.js"></script>
 
-  <script src="https://unpkg.com/@babel/standalone@7.13.0/babel.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-800">
   <div id="root"></div>
 
-  <script type="text/babel" data-type="module" data-runtime="classic">
-    /** @jsxRuntime classic */
-    /** @jsx React.createElement */
+  <script type="text/babel">
     // ============================================================================
-    // IMPORTACIONES DE FIREBASE (Módulos de navegador)
+    // TRADUCTOR DE FIREBASE (Modo Clásico Antierrores)
     // ============================================================================
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-    import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-    import { getFirestore, collection, doc, setDoc, onSnapshot, query, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
-
+    const initializeApp = (config) => firebase.initializeApp(config);
+    const getAuth = () => firebase.auth();
+    const signInAnonymously = (auth) => auth.signInAnonymously();
+    const signInWithCustomToken = (auth, token) => auth.signInWithCustomToken(token);
+    const onAuthStateChanged = (auth, callback) => auth.onAuthStateChanged(callback);
+    const getFirestore = () => firebase.firestore();
+    const collection = (db, ...paths) => db.collection(paths.join('/'));
+    const doc = (db, ...paths) => db.doc(paths.join('/'));
+    const query = (ref) => ref;
+    const onSnapshot = (ref, callback) => ref.onSnapshot(callback);
+    const serverTimestamp = () => firebase.firestore.FieldValue.serverTimestamp();
     // ============================================================================
     // EXTRACCIÓN DE DEPENDENCIAS GLOBALES (React y Lucide)
     // ============================================================================
