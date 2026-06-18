@@ -5,24 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Autoevaluación Institucional MAAC 2025</title>
   
-  <!-- 1. Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- 2. React y ReactDOM en versiones UMD (Estrictamente ANTES de Babel y Lucide) -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 
-  <!-- 3. Lucide React UMD -->
   <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.js"></script>
 
-  <!-- 4. Babel Standalone -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-800">
   <div id="root"></div>
 
-  <!-- Script Principal de la Aplicación -->
-  <script type="text/babel" data-type="module">
+  <script type="text/babel" data-type="module" data-runtime="classic">
     // ============================================================================
     // IMPORTACIONES DE FIREBASE (Módulos de navegador)
     // ============================================================================
@@ -34,13 +29,15 @@
     // EXTRACCIÓN DE DEPENDENCIAS GLOBALES (React y Lucide)
     // ============================================================================
     const { useState, useEffect, useMemo, useRef } = React;
+    
+    // (AQUÍ CORREGIMOS EL ERROR DE LOS ICONOS PARA QUE NUNCA DEJE LA PÁGINA EN BLANCO)
     const { 
       BookOpen, Users, UserCheck, GraduationCap, FileText, 
       TrendingUp, Globe, Lightbulb, Heart, Monitor, 
       Settings, ShieldCheck, ChevronRight, ChevronLeft, 
       Save, BarChart2, CheckCircle, Info, Sparkles, Loader2, X, ScrollText, Target, Zap, Upload,
       Volume2, VolumeX, MessageSquare, Send, Award, UserCog, CheckSquare, Server, ClipboardList, PlusCircle
-    } = lucideReact;
+    } = window.lucide || window.LucideReact || window.lucideReact || {};
 
     // ============================================================================
     // CONFIGURACIÓN DE FIREBASE
